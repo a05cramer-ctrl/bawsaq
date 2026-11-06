@@ -412,26 +412,25 @@ footer a{color:var(--mute)}
     <div class="lform">
       <div class="limg">
         <img id="dlgImg" class="px" alt="Coin image">
-        <label class="up">Use my own image<input type="file" id="dlgFile" accept="image/png,image/jpeg,image/gif,image/webp"></label>
       </div>
       <div class="fields">
         <label for="fName">Name<input id="fName" readonly></label>
         <label for="fTk">Ticker<input id="fTk" maxlength="10" autocomplete="off"></label>
         <label for="fBuy">Dev buy (SOL)<input id="fBuy" type="number" min="0" max="10" step="0.05" value="0"></label>
-        <label for="fX">X link (optional)<input id="fX" placeholder="https://x.com/…" autocomplete="off"></label>
+        <label for="fX">X handle (optional)<input id="fX" placeholder="@yourcoin" autocomplete="off"></label>
       </div>
     </div>
     <button class="btn btn-buy wide" type="button" id="launchBtn">Connect wallet to launch</button>
     <ol class="prog" id="prog" hidden>
       <li>Check the ticker is still open</li>
-      <li>Upload image and metadata</li>
+      <li>Prepare the coin metadata</li>
       <li>Build the transaction</li>
       <li>Approve in your wallet</li>
       <li>Send to Solana</li>
       <li>Confirmed</li>
     </ol>
     <div class="copied" id="dlgMsg" aria-live="polite"></div>
-    <p class="fine">You sign in your own wallet and the mint key is made in your browser. Cost: network fees and rent (about 0.02 SOL) plus your dev buy. Coins launched on pump.fun directly are never listed.</p>
+    <p class="fine">The coin image is the company's BAWSAQ item. You sign in your own wallet and the mint key is made in your browser. Cost: network fees and rent (about 0.02 SOL) plus your dev buy. Coins launched on pump.fun directly are never listed.</p>
   </div>
 </div>
 
@@ -549,7 +548,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDlg(); });
 const W = window.solanaWeb3;
 const MEMO_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
 const CB_ID = "ComputeBudget111111111111111111111111111111";
-let wallet=null, pk=null, imgData="", busy=false;
+let wallet=null, pk=null, busy=false;
 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 function provider(){ return (window.phantom&&window.phantom.solana) || window.solflare || window.backpack || window.solana || null; }
 function setWalletUi(){
@@ -577,27 +576,15 @@ setTimeout(()=>{ try{ const p=provider(); if(p && p.connect){ p.connect({onlyIfT
 function step(i, state){ const lis=[...$("prog").children]; $("prog").hidden=false;
   lis.forEach((li,k)=>{ li.className = k<i ? "ok" : k===i ? (state||"on") : ""; }); }
 
-function itemImage(c){
-  const cv=document.createElement("canvas"); cv.width=cv.height=512; const g=cv.getContext("2d");
-  const gr=g.createLinearGradient(0,0,0,512); gr.addColorStop(0,"#6a23bf"); gr.addColorStop(.62,"#f72e94"); gr.addColorStop(.62,"#2a0f4f"); gr.addColorStop(1,"#130923");
-  g.fillStyle=gr; g.fillRect(0,0,512,512);
-  g.fillStyle="#fd8843"; g.beginPath(); g.arc(256,318,150,Math.PI,0); g.fill();
-  const im=new Image(); im.src="data:image/png;base64,"+ITEMS[c.n];
-  return new Promise(res=>{ im.onload=()=>{ g.imageSmoothingEnabled=false; g.drawImage(im,64,52,384,384); res(cv.toDataURL("image/png")); }; im.onerror=()=>res(cv.toDataURL("image/png")); });
-}
+const slug = n => n.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 async function openLaunch(c){
   busy=false; msg(""); $("prog").hidden=true; [...$("prog").children].forEach(li=>li.className="");
   $("dlgT").textContent="Launch "+c.n;
-  $("fName").value=c.n; $("fTk").value=c.tk; $("fBuy").value="0"; $("fX").value=""; $("dlgFile").value="";
-  imgData = await itemImage(c); $("dlgImg").src=imgData;
+  $("fName").value=c.n; $("fTk").value=c.tk; $("fBuy").value="0"; $("fX").value="";
+  $("dlgImg").src="/items/"+slug(c.n)+".png";
   $("launchBtn").disabled=false; setWalletUi();
   $("listdlg").hidden=false; $("fTk").focus();
 }
-$("dlgFile").addEventListener("change", e=>{
-  const f=e.target.files&&e.target.files[0]; if(!f) return;
-  if(f.size>4e6){ msg("That image is over 4 MB. Pick a smaller one.", true); return; }
-  const r=new FileReader(); r.onload=()=>{ imgData=r.result; $("dlgImg").src=imgData; msg(""); }; r.readAsDataURL(f);
-});
 async function post(url, body){
   const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
   let j={}; try{ j=await r.json(); }catch(_){}
@@ -644,7 +631,8 @@ $("launchBtn").addEventListener("click", async ()=>{
   const buy=Math.max(0,Math.min(10,parseFloat($("fBuy").value)||0));
   const xl=$("fX").value.trim();
   if(!sym){ msg("Add a ticker (letters and numbers, up to 10).", true); return; }
-  if(xl && !/^https:\/\/(x|twitter)\.com\//.test(xl)){ msg("X link should start with https://x.com/", true); return; }
+  const xh = xl.replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i,"").replace(/^@/,"").split(/[/?#]/)[0];
+  if(xl && !/^[A-Za-z0-9_]{1,15}$/.test(xh)){ msg("X handle should look like @yourcoin.", true); return; }
   busy=true; $("launchBtn").disabled=true; $("launchBtn").textContent="Launching…"; msg("");
   let k=0;
   try{
@@ -653,11 +641,11 @@ $("launchBtn").addEventListener("click", async ()=>{
     const taken = (now.listings||[]).find(l=>l.company===c.n);
     if(taken) throw new Error(c.n+" was just launched by "+short(taken.creator||taken.mint)+". Only the first launch owns it.");
     step(k=1);
-    const meta = await post("/api/ipfs",{ name:c.n, symbol:sym, image:imgData, website:location.origin, twitter:xl||undefined,
-      description: c.n+" on BAWSAQ, GTA VI's stock market. Launched through "+location.host+"; the first BAWSAQ launch of "+c.n+" owns the listing." });
+    const uri = "https://bawsaq.vercel.app/api/meta?c="+slug(c.n)+"&s="+sym+(xh?"&x="+xh:"");
+    const mr = await fetch(uri); if(!mr.ok) throw new Error("Metadata check failed ("+mr.status+").");
     step(k=2);
     const mintKp = W.Keypair.generate(); const mint=mintKp.publicKey.toBase58();
-    const built = await post("/api/create",{ publicKey:pk.toBase58(), mint, name:c.n, symbol:sym, uri:meta.metadataUri, amount:buy });
+    const built = await post("/api/create",{ publicKey:pk.toBase58(), mint, name:c.n, symbol:sym, uri, amount:buy });
     const tx = await withRegistry(W.VersionedTransaction.deserialize(b64ToBytes(built.tx)), c.n, mint);
     tx.sign([mintKp]);
     step(k=3);

@@ -367,7 +367,7 @@ footer a{color:var(--mute)}
         <h2>The registry, on-chain</h2>
         <ol style="margin-top:20px">
           <li><strong>Registry:</strong> <a class="reg" id="regLink" href="#" target="_blank" rel="noopener"></a>. Every BAWSAQ launch sends it a 0 SOL transfer with a memo.</li>
-          <li><strong>Valid launch:</strong> the same transaction calls pump.fun's create, the new mint signs it, and the memo reads <code>BAWSAQ|Company|mint</code>.</li>
+          <li><strong>Valid launch:</strong> the same transaction calls pump.fun's create, the new mint signs it, and the memo reads <code>BAWSAQ|Company</code>.</li>
           <li><strong>Owner:</strong> the earliest valid launch for each company. Later ones are ignored.</li>
           <li><strong>Prices:</strong> market cap, 24h move and volume come from DexScreener. The index is the sum of every owner's market cap.</li>
         </ol>
@@ -376,7 +376,7 @@ footer a{color:var(--mute)}
   pump.fun   create(<em>"Burger Shot"</em>, <em>"BSHOT"</em>, uri)  <b>// mint signs</b>
   pump.fun   buy(devBuy)                          <b>// optional</b>
   system     transfer(you → registry, 0 SOL)
-  memo       <em>"BAWSAQ|Burger Shot|&lt;mint&gt;"</em>
+  memo       <em>"BAWSAQ|Burger Shot"</em>
 
 <b>board</b> = getSignaturesForAddress(registry)
   .filter(valid).sortBy(slot).firstPerCompany()</pre>
@@ -618,7 +618,7 @@ async function withRegistry(vt, company, mint){
     data: new Uint8Array([2,0,0,0,0,0,0,0,0,0,0,0]) }));
   tm.instructions.push(new W.TransactionInstruction({ programId: new W.PublicKey(MEMO_ID),
     keys: [{ pubkey: pk, isSigner: true, isWritable: false }],
-    data: new TextEncoder().encode("BAWSAQ|"+company+"|"+mint) }));
+    data: new TextEncoder().encode("BAWSAQ|"+company) }));
   return new W.VersionedTransaction(tm.compileToV0Message(alts));
 }
 
@@ -641,7 +641,7 @@ $("launchBtn").addEventListener("click", async ()=>{
     const taken = (now.listings||[]).find(l=>l.company===c.n);
     if(taken) throw new Error(c.n+" was just launched by "+short(taken.creator||taken.mint)+". Only the first launch owns it.");
     step(k=1);
-    const uri = "https://bawsaq.vercel.app/api/meta?c="+slug(c.n)+"&s="+sym+(xh?"&x="+xh:"");
+    const uri = "https://bawsaq.vercel.app/m/"+CO.indexOf(c)+"/"+sym+(xh?"/"+xh:"");
     const mr = await fetch(uri); if(!mr.ok) throw new Error("Metadata check failed ("+mr.status+").");
     step(k=2);
     const mintKp = W.Keypair.generate(); const mint=mintKp.publicKey.toBase58();

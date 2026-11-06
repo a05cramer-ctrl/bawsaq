@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/m/:c/:s/:x",
+      "destination": "/api/meta?c=:c&s=:s&x=:x"
+    },
+    {
+      "source": "/m/:c/:s",
+      "destination": "/api/meta?c=:c&s=:s"
+    }
+  ]
+}

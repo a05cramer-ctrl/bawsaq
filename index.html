@@ -608,9 +608,15 @@ const b64ToBytes = b=>Uint8Array.from(atob(b),ch=>ch.charCodeAt(0));
 const bytesToB64 = u=>{ let s=""; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); };
 
 // Adds the BAWSAQ registry record (0 SOL transfer + memo) to PumpPortal's create transaction.
-function withRegistry(vt, company, mint){
-  if(vt.message.addressTableLookups && vt.message.addressTableLookups.length) throw new Error("Unexpected lookup tables in the launch transaction.");
-  const tm = W.TransactionMessage.decompile(vt.message);
+async function withRegistry(vt, company, mint){
+  let alts=[];
+  const lk=vt.message.addressTableLookups||[];
+  if(lk.length){
+    const keys=lk.map(l=>l.accountKey.toBase58());
+    const j=await post("/api/send",{ alts: keys });
+    alts=j.accounts.map(a=>new W.AddressLookupTableAccount({ key:new W.PublicKey(a.key), state:W.AddressLookupTableAccount.deserialize(b64ToBytes(a.data)) }));
+  }
+  const tm = W.TransactionMessage.decompile(vt.message, { addressLookupTableAccounts: alts });
   for(const ix of tm.instructions){
     if(ix.programId.toBase58()===CB_ID && ix.data.length>=5 && ix.data[0]===2){
       const dv=new DataView(ix.data.buffer, ix.data.byteOffset, ix.data.length);
@@ -621,7 +627,7 @@ function withRegistry(vt, company, mint){
   tm.instructions.push(new W.TransactionInstruction({ programId: new W.PublicKey(MEMO_ID),
     keys: [{ pubkey: pk, isSigner: true, isWritable: false }],
     data: new TextEncoder().encode("BAWSAQ|"+company+"|"+mint) }));
-  return new W.VersionedTransaction(tm.compileToV0Message());
+  return new W.VersionedTransaction(tm.compileToV0Message(alts));
 }
 
 $("launchBtn").addEventListener("click", async ()=>{
@@ -647,7 +653,7 @@ $("launchBtn").addEventListener("click", async ()=>{
     step(k=2);
     const mintKp = W.Keypair.generate(); const mint=mintKp.publicKey.toBase58();
     const built = await post("/api/create",{ publicKey:pk.toBase58(), mint, name:c.n, symbol:sym, uri:meta.metadataUri, amount:buy });
-    const tx = withRegistry(W.VersionedTransaction.deserialize(b64ToBytes(built.tx)), c.n, mint);
+    const tx = await withRegistry(W.VersionedTransaction.deserialize(b64ToBytes(built.tx)), c.n, mint);
     tx.sign([mintKp]);
     step(k=3);
     const signed = await wallet.signTransaction(tx);

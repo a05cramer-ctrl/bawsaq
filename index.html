@@ -614,7 +614,9 @@ async function withRegistry(vt, company, mint){
   if(lk.length){
     const keys=lk.map(l=>l.accountKey.toBase58());
     const j=await post("/api/send",{ alts: keys });
-    alts=j.accounts.map(a=>new W.AddressLookupTableAccount({ key:new W.PublicKey(a.key), state:W.AddressLookupTableAccount.deserialize(b64ToBytes(a.data)) }));
+    // parse lookup tables by hand (web3's deserializer needs Node's Buffer): 56-byte header, then 32-byte addresses
+    alts=j.accounts.map(a=>{ const d=b64ToBytes(a.data), addresses=[]; for(let o=56;o+32<=d.length;o+=32) addresses.push(new W.PublicKey(d.slice(o,o+32)));
+      return new W.AddressLookupTableAccount({ key:new W.PublicKey(a.key), state:{ deactivationSlot:BigInt("18446744073709551615"), lastExtendedSlot:0, lastExtendedSlotStartIndex:0, authority:undefined, addresses } }); });
   }
   const tm = W.TransactionMessage.decompile(vt.message, { addressLookupTableAccounts: alts });
   for(const ix of tm.instructions){
@@ -623,7 +625,10 @@ async function withRegistry(vt, company, mint){
       dv.setUint32(1, Math.min(1400000, dv.getUint32(1,true)+40000), true);
     }
   }
-  tm.instructions.push(W.SystemProgram.transfer({ fromPubkey: pk, toPubkey: new W.PublicKey(CFG.REGISTRY), lamports: 0 }));
+  // system transfer of 0 lamports to the registry (instruction 2 + u64 amount), built by hand to avoid Buffer
+  tm.instructions.push(new W.TransactionInstruction({ programId: W.SystemProgram.programId,
+    keys: [{ pubkey: pk, isSigner: true, isWritable: true }, { pubkey: new W.PublicKey(CFG.REGISTRY), isSigner: false, isWritable: true }],
+    data: new Uint8Array([2,0,0,0,0,0,0,0,0,0,0,0]) }));
   tm.instructions.push(new W.TransactionInstruction({ programId: new W.PublicKey(MEMO_ID),
     keys: [{ pubkey: pk, isSigner: true, isWritable: false }],
     data: new TextEncoder().encode("BAWSAQ|"+company+"|"+mint) }));

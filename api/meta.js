@@ -1,6 +1,6 @@
 // Token metadata for coins launched through BAWSAQ. pump.fun's create instruction stores this URL as the
 // coin's metadata URI, so it must stay stable forever: everything is derived from the query string, no storage.
-// GET /api/meta?c=<company-slug>&s=<TICKER>[&x=<x handle>]
+// GET /m/<company index>/<TICKER>[/<x handle>]  (rewritten to /api/meta?c=&s=&x= by vercel.json)
 const COMPANIES = {
   "sprunk": "Sprunk", "ecola": "eCola", "pisswasser": "Pisswasser", "cluckin-bell": "Cluckin' Bell",
   "burger-shot": "Burger Shot", "up-n-atom": "Up-n-Atom", "bean-machine": "Bean Machine", "ammu-nation": "Ammu-Nation",
@@ -10,7 +10,9 @@ const COMPANIES = {
 const SITE = "https://bawsaq.vercel.app";
 
 module.exports = (req, res) => {
-  const c = String(req.query.c || "");
+  const SLUGS = Object.keys(COMPANIES);
+  let c = String(req.query.c || "");
+  if (/^\d{1,2}$/.test(c)) c = SLUGS[Number(c)] || "";
   const name = COMPANIES[c];
   const symbol = String(req.query.s || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
   const x = String(req.query.x || "").replace(/[^A-Za-z0-9_]/g, "").slice(0, 15);

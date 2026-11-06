@@ -1,5 +1,5 @@
 // BAWSAQ board: only coins launched through bawsaq are listed.
-// Every site launch adds a 0-lamport transfer to REGISTRY plus a memo "BAWSAQ|<Company>|<mint>"
+// Every site launch adds a 0-lamport transfer to REGISTRY plus a memo "BAWSAQ|<Company>"
 // in the same transaction that creates the coin on pump.fun. This function reads the registry's
 // history, keeps valid launches (tx succeeded, pump.fun program called, mint signed the tx),
 // takes the earliest per company, then adds market data from DexScreener.
@@ -25,11 +25,12 @@ function parseLaunch(tx, sig) {
   const keys = msg.accountKeys.map(k => ({ pk: k.pubkey || k, signer: !!k.signer }));
   const memoIx = msg.instructions.find(i => (i.program === "spl-memo") && typeof i.parsed === "string" && i.parsed.startsWith("BAWSAQ|"));
   if (!memoIx) return null;
-  const [, company, mint] = memoIx.parsed.split("|");
+  const parts = memoIx.parsed.split("|"); const company = parts[1];
   if (!COMPANIES.includes(company)) return null;
   if (!msg.instructions.some(i => i.programId === PUMP)) return null;
-  if (!keys.some(k => k.pk === mint && k.signer)) return null;
   const creator = keys[0] && keys[0].pk;
+  const mint = parts[2] || (keys.find(k => k.signer && k.pk !== creator) || {}).pk;
+  if (!mint || !keys.some(k => k.pk === mint && k.signer)) return null;
   return { company, mint, creator, sig, slot: tx.slot, time: (tx.blockTime || 0) * 1000 };
 }
 

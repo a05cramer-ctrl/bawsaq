@@ -463,6 +463,17 @@ const CO = [
 const HUES = ["#f72e94","#fd8843","#6a23bf","#b524af","#e2463f","#1f9e6e","#3a6fd8","#c98a12"];
 CO.forEach((c,i)=>{c.k=c.n; c.col=HUES[i%HUES.length]; c.mono=c.n.replace(/[^A-Za-z]/g,"").slice(0,2).toUpperCase();});
 
+const norm = s => (s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+const $ = id => document.getElementById(id);
+const fmtUsd = v => { if(v==null||isNaN(v)) return "—"; const a=Math.abs(v);
+  if(a>=1e9) return "$"+(v/1e9).toFixed(2)+"B"; if(a>=1e6) return "$"+(v/1e6).toFixed(2)+"M";
+  if(a>=1e3) return "$"+(v/1e3).toFixed(1)+"K"; return "$"+Math.round(v); };
+const fmtPct = v => v==null||isNaN(v) ? "—" : (v>0?"+":"")+v.toFixed(2)+"%";
+const cls = v => v==null||isNaN(v)||v===0 ? "flat" : v>0 ? "up" : "down";
+const short = a => a.slice(0,4)+"…"+a.slice(-4);
+const etTime = t => new Date(t).toLocaleTimeString("en-US",{timeZone:"America/New_York",hour:"numeric",minute:"2-digit"})+" ET";
+const etDate = t => new Date(t).toLocaleDateString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",year:"numeric"});
+
 let state = {rows:CO.map(c=>({c})), live:false, at:0, filter:"all", note:"Loading the registry", launches:0};
 
 async function getBoard(fresh){

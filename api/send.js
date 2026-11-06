@@ -29,6 +29,11 @@ module.exports = async (req, res) => {
       return res.status(200).json({ accounts });
     }
     if (!b.tx) return res.status(400).json({ error: "tx required" });
+    if (b.simulate) {
+      const j = await rpc("simulateTransaction", [b.tx, { encoding: "base64", sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" }]);
+      const v = j.result && j.result.value;
+      return res.status(200).json({ err: v ? v.err : j.error, units: v && v.unitsConsumed, logs: v && v.logs ? v.logs.slice(-8) : null });
+    }
     const j = await rpc("sendTransaction", [b.tx, { encoding: "base64", skipPreflight: false, maxRetries: 5, preflightCommitment: "confirmed" }]);
     if (j.error) return res.status(400).json({ error: j.error.message || "send failed", logs: j.error.data && j.error.data.logs ? j.error.data.logs.slice(-6) : null });
     res.status(200).json({ signature: j.result });

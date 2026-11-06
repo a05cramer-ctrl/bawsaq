@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Urbanist:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap">
 <script src="config.js"></script>
+<script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
 <style>
 /* Layout: one night-market column. Pixel sunset is the only loud thing; everything else is a quiet trading terminal under it. */
 :root{
@@ -186,9 +187,36 @@ footer{border-top:1px solid var(--line);padding-block:36px;color:var(--dim);font
 footer .wrap{display:flex;gap:20px;justify-content:space-between;flex-wrap:wrap}
 footer a{color:var(--mute)}
 
+/* launch form */
+.dsub{color:var(--mute);margin:6px 0 18px;font-size:15px}
+.lform{display:grid;grid-template-columns:132px minmax(0,1fr);gap:18px;align-items:start}
+.limg{display:grid;gap:8px;justify-items:center}
+.limg img{width:132px;height:132px;border-radius:16px;border:1px solid var(--line2);object-fit:cover;background:var(--deep)}
+.up{font-size:12px;color:var(--mute);cursor:pointer;text-decoration:underline;text-underline-offset:3px;position:relative}
+.up input{position:absolute;width:1px;height:1px;opacity:0;left:0}
+.fields{display:grid;gap:10px}
+.fields label{display:grid;gap:4px;font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.fields input{font:15px var(--f-body);color:var(--fg);background:var(--deep);border:1px solid var(--line2);border-radius:9px;padding:9px 11px;letter-spacing:0;text-transform:none;width:100%}
+.fields input:focus{outline:none;border-color:var(--orange)}
+.fields input[readonly]{color:var(--mute)}
+#fTk{font-family:var(--f-pixel);text-transform:uppercase}
+.wide{width:100%;margin-top:18px;padding:13px}
+.wide:disabled{opacity:.6;cursor:default}
+.prog{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:6px;font-size:14px;color:var(--dim)}
+.prog li::before{content:"○";display:inline-block;width:20px;font-family:var(--f-mono)}
+.prog li.on{color:var(--fg)} .prog li.on::before{content:"◌";color:var(--orange)}
+.prog li.ok{color:var(--mute)} .prog li.ok::before{content:"✓";color:var(--green)}
+.prog li.bad{color:var(--red)} .prog li.bad::before{content:"✕"}
+.fine{font-size:12.5px;color:var(--dim);margin:14px 0 0}
+.copied a{color:var(--orange)}
+.copied.err{color:var(--red)}
+.wbtn{padding:8px 13px;font-size:14px}
+.wbtn.on{border-color:color-mix(in srgb,var(--green) 55%,transparent);font-family:var(--f-mono);font-weight:500}
+.reg{font-family:var(--f-mono);font-size:13px;overflow-wrap:anywhere}
+@media (max-width:520px){.lform{grid-template-columns:1fr}.limg{justify-items:start}.wbtn{padding:7px 10px;font-size:13px}}
 /* list dialog */
 #listdlg{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:color-mix(in srgb,var(--deep) 75%,transparent);backdrop-filter:blur(6px);padding:max(16px,env(safe-area-inset-left,0px))}
-.dlg{width:min(480px,100%);background:var(--panel);border:1px solid var(--line2);border-radius:18px;padding:26px;box-shadow:0 40px 100px -30px #000}
+.dlg{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:18px;padding:26px;box-shadow:0 40px 100px -30px #000}
 .dlg h3{margin:0;font-size:24px;letter-spacing:-.01em}
 .dlg ol{margin:16px 0 20px;padding-left:20px;color:var(--mute);display:grid;gap:8px}
 .dlg ol strong{color:var(--fg)}
@@ -239,6 +267,7 @@ footer a{color:var(--mute)}
     <a class="brand" href="#board" aria-label="BAWSAQ home"><img class="px" src="data:image/png;base64,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" alt=""><b>BAWSAQ</b></a>
     <div class="bell" id="bell"><i></i><span id="bellTxt">Checking the bell…</span></div>
     <div class="sp"></div>
+    <button class="btn btn-ghost wbtn" id="walletBtn" type="button">Connect wallet</button>
     <button class="chip" id="caChip" type="button" title="Copy contract address">CA drops at launch</button>
     <a class="btn btn-buy" id="buyTop" href="#" target="_blank" rel="noopener" aria-disabled="true">Buy $BAWSAQ</a>
   </div>
@@ -252,7 +281,7 @@ footer a{color:var(--mute)}
       <div>
         <div class="eyebrow">Leonida · Est. 2026</div>
         <h1>GTA VI's stock market, <em>live on-chain.</em></h1>
-        <p class="lede">Every company in Leonida is a ticker on one board. <strong>The first pump.fun coin launched under a company's name owns its listing</strong>, and the board tracks it live: market cap, 24h move, volume.</p>
+        <p class="lede">Every company in Leonida is a ticker on one board. <strong>The first coin launched through BAWSAQ for each company owns its listing</strong>, and the board tracks it live: market cap, 24h move, volume.</p>
         <div class="cta">
           <a class="btn btn-buy" href="#board">Open the board</a>
           <a class="btn btn-ghost" href="#list">List a company</a>
@@ -278,14 +307,14 @@ footer a{color:var(--mute)}
     <div class="wrap">
       <div class="sec-head">
         <div><div class="eyebrow">The board</div><h2>Leonida, by market cap</h2></div>
-        <p class="sec-note">Live from DexScreener every 60 seconds. Unlisted companies are open: launch the coin and you own the ticker.</p>
+        <p class="sec-note">Only coins launched through this site are listed. Open companies are free to take: launch one and you own the ticker.</p>
       </div>
       <div class="board-shell">
         <div class="board-bar">
           <div class="seg" role="group" aria-label="Filter companies">
             <button type="button" data-f="all" aria-pressed="true">All</button>
             <button type="button" data-f="listed" aria-pressed="false">Listed</button>
-            <button type="button" data-f="open" aria-pressed="false">Unlisted</button>
+            <button type="button" data-f="open" aria-pressed="false">Open</button>
           </div>
           <div class="sp"></div>
           <div class="upd" id="upd"><i></i><span>Loading board</span></div>
@@ -304,12 +333,12 @@ footer a{color:var(--mute)}
     <div class="wrap">
       <div class="sec-head">
         <div><div class="eyebrow">Listing</div><h2>How a company gets listed</h2></div>
-        <p class="sec-note">No forms, no approval. The chain decides who launched first.</p>
+        <p class="sec-note">No approval. Your launch writes itself to the on-chain registry, and the chain decides who was first.</p>
       </div>
       <ol class="steps">
-        <li><h3>Pick an unlisted company</h3><p>Sixteen Leonida brands are on the board. Anything marked <em>Unlisted</em> has no coin yet.</p></li>
-        <li><h3>Launch it on pump.fun</h3><p>The coin's name must be the company name, for example <code>Burger Shot</code>. The ticker is up to you.</p></li>
-        <li><h3>First launch owns it</h3><p>On the next refresh (within 60 s) the earliest matching coin becomes the listing. Later copies never replace it.</p></li>
+        <li><h3>Pick an open company</h3><p>Sixteen Leonida brands are on the board. Anything marked <em>Open</em> has no BAWSAQ coin yet.</p></li>
+        <li><h3>Launch it from here</h3><p>Connect your wallet and hit <em>Launch it</em>. One transaction creates the coin on pump.fun and registers it. The name is the company, for example <code>Burger Shot</code>; the ticker is yours.</p></li>
+        <li><h3>First launch owns it</h3><p>The earliest registered launch per company is the listing. Coins launched on pump.fun directly, even with the same name, never list.</p></li>
       </ol>
     </div>
   </section>
@@ -335,22 +364,22 @@ footer a{color:var(--mute)}
     <div class="wrap verify">
       <div>
         <div class="eyebrow">Verify it yourself</div>
-        <h2>The listing rule, in code</h2>
+        <h2>The registry, on-chain</h2>
         <ol style="margin-top:20px">
-          <li><strong>Source:</strong> DexScreener's public search API, queried by company name. No keys, no backend.</li>
-          <li><strong>Match:</strong> Solana token, mint ends in <code>pump</code>, and its name or ticker equals the company name once spaces and punctuation are removed.</li>
-          <li><strong>Owner:</strong> the matching token with the earliest pair creation time.</li>
-          <li><strong>Index:</strong> the sum of every owner's market cap.</li>
+          <li><strong>Registry:</strong> <a class="reg" id="regLink" href="#" target="_blank" rel="noopener"></a>. Every BAWSAQ launch sends it a 0 SOL transfer with a memo.</li>
+          <li><strong>Valid launch:</strong> the same transaction calls pump.fun's create, the new mint signs it, and the memo reads <code>BAWSAQ|Company|mint</code>.</li>
+          <li><strong>Owner:</strong> the earliest valid launch for each company. Later ones are ignored.</li>
+          <li><strong>Prices:</strong> market cap, 24h move and volume come from DexScreener. The index is the sum of every owner's market cap.</li>
         </ol>
       </div>
-      <pre aria-label="Listing rule"><b>GET</b> api.dexscreener.com/latest/dex/search?q=<em>Burger Shot</em>
+      <pre aria-label="Launch transaction"><b>one transaction</b>
+  pump.fun   create(<em>"Burger Shot"</em>, <em>"BSHOT"</em>, uri)  <b>// mint signs</b>
+  pump.fun   buy(devBuy)                          <b>// optional</b>
+  system     transfer(you → registry, 0 SOL)
+  memo       <em>"BAWSAQ|Burger Shot|&lt;mint&gt;"</em>
 
-pairs
-  .filter(p =&gt; p.chainId === <em>"solana"</em>
-            &amp;&amp; p.baseToken.address.endsWith(<em>"pump"</em>)
-            &amp;&amp; norm(p.baseToken.name) === <em>"burgershot"</em>)
-  .sort((a, b) =&gt; a.pairCreatedAt - b.pairCreatedAt)[0]
-<b>// → the listing. Later launches are copies.</b></pre>
+<b>board</b> = getSignaturesForAddress(registry)
+  .filter(valid).sortBy(slot).firstPerCompany()</pre>
     </div>
   </section>
 
@@ -358,8 +387,8 @@ pairs
     <div class="wrap">
       <div class="sec-head"><div><div class="eyebrow">FAQ</div><h2>Before you trade</h2></div></div>
       <div class="faq">
-        <details><summary>Who launches the company coins?</summary><p>Anyone. BAWSAQ doesn't launch, hold or vet them. It reads the chain and lists the first coin under each company name.</p></details>
-        <details><summary>Someone launched a copy with the same name. Which one counts?</summary><p>The earliest one. The board sorts every match by creation time and lists the first. Copies show up in search, never on the board.</p></details>
+        <details><summary>Who launches the company coins?</summary><p>Anyone with a Solana wallet, from this site. BAWSAQ never holds your keys or the coins; it reads the registry and lists the first launch per company.</p></details>
+        <details><summary>Someone launched a coin with the same name on pump.fun. Does it count?</summary><p>No. Only launches made through BAWSAQ are written to the registry, and only the first registered launch per company is listed.</p></details>
         <details><summary>Can a company be delisted?</summary><p>No. Once a coin owns a ticker it keeps it, whatever its market cap does.</p></details>
         <details><summary>What does $BAWSAQ do?</summary><p id="faqFee"></p></details>
         <details><summary>Is this connected to Rockstar Games?</summary><p>No. BAWSAQ is fan-made and not affiliated with Rockstar Games or Take-Two Interactive. Company names are used as in-game references.</p></details>
@@ -378,18 +407,31 @@ pairs
 <div id="listdlg" hidden role="dialog" aria-modal="true" aria-labelledby="dlgT">
   <div class="dlg">
     <button class="x" type="button" id="dlgX" aria-label="Close">×</button>
-    <h3 id="dlgT">List Burger Shot</h3>
-    <ol>
-      <li>Open <strong>pump.fun → Create coin</strong>.</li>
-      <li>Coin name: <strong id="dlgName">Burger Shot</strong> (exactly this).</li>
-      <li>Ticker: your call. Suggested <strong id="dlgTk">BSHOT</strong>.</li>
-      <li>Launch. The board lists it on its next refresh, within 60 seconds.</li>
-    </ol>
-    <div class="row">
-      <button class="btn btn-ghost" type="button" id="dlgCopy">Copy name</button>
-      <a class="btn btn-buy" href="https://pump.fun/create" target="_blank" rel="noopener">Open pump.fun</a>
+    <h3 id="dlgT">Launch Burger Shot</h3>
+    <p class="dsub">Launch it on pump.fun from your wallet. The launch is written to the BAWSAQ registry in the same transaction; the first one for each company owns the listing.</p>
+    <div class="lform">
+      <div class="limg">
+        <img id="dlgImg" class="px" alt="Coin image">
+        <label class="up">Use my own image<input type="file" id="dlgFile" accept="image/png,image/jpeg,image/gif,image/webp"></label>
+      </div>
+      <div class="fields">
+        <label for="fName">Name<input id="fName" readonly></label>
+        <label for="fTk">Ticker<input id="fTk" maxlength="10" autocomplete="off"></label>
+        <label for="fBuy">Dev buy (SOL)<input id="fBuy" type="number" min="0" max="10" step="0.05" value="0"></label>
+        <label for="fX">X link (optional)<input id="fX" placeholder="https://x.com/…" autocomplete="off"></label>
+      </div>
     </div>
+    <button class="btn btn-buy wide" type="button" id="launchBtn">Connect wallet to launch</button>
+    <ol class="prog" id="prog" hidden>
+      <li>Check the ticker is still open</li>
+      <li>Upload image and metadata</li>
+      <li>Build the transaction</li>
+      <li>Approve in your wallet</li>
+      <li>Send to Solana</li>
+      <li>Confirmed</li>
+    </ol>
     <div class="copied" id="dlgMsg" aria-live="polite"></div>
+    <p class="fine">You sign in your own wallet and the mint key is made in your browser. Cost: network fees and rent (about 0.02 SOL) plus your dev buy. Coins launched on pump.fun directly are never listed.</p>
   </div>
 </div>
 
@@ -421,63 +463,22 @@ const CO = [
 const HUES = ["#f72e94","#fd8843","#6a23bf","#b524af","#e2463f","#1f9e6e","#3a6fd8","#c98a12"];
 CO.forEach((c,i)=>{c.k=c.n; c.col=HUES[i%HUES.length]; c.mono=c.n.replace(/[^A-Za-z]/g,"").slice(0,2).toUpperCase();});
 
-/* Real snapshot from DexScreener, taken Nov 6 2026 10:31 CET. Replaced by live data as soon as the API answers. */
-const SNAP = {t:1793957510852, d:{
-  "Sprunk":["JCfrK5MpDJvBX32ddoRfhENnL6Scek7vybNQLUvGpump","SPRUNK",4594,null,48,1792461204000],
-  "Cluckin' Bell":["DZFJDhiQAoLZoKMxRTLuj3Zv8UHStsUCr9bBaqovpump","CB",4214,-0.17,67,1792630022000],
-  "Burger Shot":["AYMZuPhocdpYRCUfGzMaLZ2fuWCqN28FFY6BAZDJpump","BS",5084,-8.18,164,1792625535000],
-  "Lifeinvader":["6zS5QLrt33KLBsrjGdDowrRFFZvvRfQPqchHkZnZpump","L",4369,null,100,1792882036000],
-  "Maze Bank":["5C9gcHwnboZbaSqNfMSDHpqBSLXWehnZHV1ZTYV4pump","MZEBNK",3138,-1.25,127,1793933088000],
-  "Weazel News":["HLstEUwKLtreML3mudvgzeoq6D5fxXKdkFf2P9qgpump","WZL",3088,null,5,1739041155000]
-}};
+let state = {rows:CO.map(c=>({c})), live:false, at:0, filter:"all", note:"Loading the registry", launches:0};
 
-const norm = s => (s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
-const $ = id => document.getElementById(id);
-const fmtUsd = v => { if(v==null||isNaN(v)) return "—"; const a=Math.abs(v);
-  if(a>=1e9) return "$"+(v/1e9).toFixed(2)+"B"; if(a>=1e6) return "$"+(v/1e6).toFixed(2)+"M";
-  if(a>=1e3) return "$"+(v/1e3).toFixed(1)+"K"; return "$"+Math.round(v); };
-const fmtPct = v => v==null||isNaN(v) ? "—" : (v>0?"+":"")+v.toFixed(2)+"%";
-const cls = v => v==null||isNaN(v)||v===0 ? "flat" : v>0 ? "up" : "down";
-const short = a => a.slice(0,4)+"…"+a.slice(-4);
-const etTime = t => new Date(t).toLocaleTimeString("en-US",{timeZone:"America/New_York",hour:"numeric",minute:"2-digit"})+" ET";
-const etDate = t => new Date(t).toLocaleDateString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",year:"numeric"});
-
-let state = {rows:null, live:false, at:0, filter:"all", note:"fetching live"};
-
-function fromSnap(){
-  return CO.map(c=>{const d=SNAP.d[c.n]; return d?{c, a:d[0], sym:d[1], mc:d[2], ch:d[3], v:d[4], since:d[5]}:{c};});
+async function getBoard(fresh){
+  const r = await fetch("/api/board"+(fresh?"?t="+Date.now():""));
+  if(!r.ok) throw new Error("board HTTP "+r.status);
+  return r.json();
 }
-
-async function fetchCo(c){
-  const r = await fetch("https://api.dexscreener.com/latest/dex/search?q="+encodeURIComponent(c.n.replace(/'/g,"")));
-  if(!r.ok) throw new Error("HTTP "+r.status);
-  const j = await r.json();
-  const by = {};
-  for(const p of (j.pairs||[])){
-    if(p.chainId!=="solana") continue;
-    const a = p.baseToken && p.baseToken.address || "";
-    if(!/pump$/.test(a)) continue;
-    if(!c.al.includes(norm(p.baseToken.name)) && !c.al.includes(norm(p.baseToken.symbol))) continue;
-    const t = by[a] || (by[a] = {a, sym:(p.baseToken.symbol||"").trim(), since:p.pairCreatedAt||9e15, mc:0, ch:null, v:0, img:""});
-    if(!t.img && p.info && p.info.imageUrl) t.img = p.info.imageUrl;
-    t.since = Math.min(t.since, p.pairCreatedAt||9e15);
-    const mc = p.marketCap||p.fdv||0;
-    if(mc>=t.mc){ t.mc=mc; t.ch = p.priceChange && p.priceChange.h24!=null ? p.priceChange.h24 : null; t.v = (p.volume&&p.volume.h24)||0; }
-  }
-  const toks = Object.values(by).sort((x,y)=>x.since-y.since);
-  return toks[0] ? {c, ...toks[0]} : {c};
+function applyBoard(j){
+  const by={}; for(const l of j.listings||[]) by[l.company]=l;
+  state.rows = CO.map(c=>{ const l=by[c.n]; return l ? {c, a:l.mint, sym:l.sym||"", mc:l.mc, ch:l.ch, v:l.v, since:l.time, img:l.img, creator:l.creator, sig:l.sig} : {c}; });
+  state.live=true; state.at=j.at||Date.now(); state.note=""; state.launches=j.launches||0;
 }
-
-async function refresh(){
-  try{
-    const out = await Promise.all(CO.map(c=>fetchCo(c)));
-    state.rows = out; state.live = true; state.at = Date.now(); state.note=""; render();
-  }catch(e){
-    if(!state.rows){ state.rows = fromSnap(); state.live=false; state.at=SNAP.t; }
-    state.note = state.live ? "retrying" : "live feed unreachable from this page"; render();
-  }
+async function refresh(fresh){
+  try{ applyBoard(await getBoard(fresh)); render(); }
+  catch(e){ state.note = state.live ? "retrying" : "Registry unreachable, retrying"; render(); }
 }
-
 function setUpd(live, txt){ const u=$("upd"); u.className="upd"+(live?" live":""); u.querySelector("span").textContent=txt; }
 
 function render(){
@@ -498,20 +499,21 @@ function render(){
   if(top){ $("sTop").innerHTML = '<span class="'+cls(top.ch)+'">'+fmtPct(top.ch)+'</span>'; $("sTopNote").textContent = top.c.n; $("tTarget").textContent = top.c.n+" ("+fmtPct(top.ch)+")"; }
   else { $("sTop").textContent="—"; $("sTopNote").textContent="no 24h moves yet"; $("tTarget").textContent="No mover yet"; }
   const src=$("sSrc"); src.className="src"+(state.live?" live":"");
-  src.querySelector("span").textContent = state.live ? "Live · "+etTime(state.at) : "Snapshot · "+etDate(SNAP.t);
-  setUpd(state.live, state.live ? "Live · updated "+etTime(state.at)+(state.note==="retrying"?" · retrying":"") : "Snapshot "+etDate(SNAP.t)+" "+etTime(SNAP.t)+" · "+state.note);
+  src.querySelector("span").textContent = state.live ? "Live · "+etTime(state.at) : state.note;
+  setUpd(state.live, state.live ? "Live · updated "+etTime(state.at)+(state.note==="retrying"?" · retrying":"") : state.note);
 
   const f = state.filter;
   $("rows").innerHTML = rows.filter(r=> f==="all" || (f==="listed"? !!r.a : !r.a)).map(r=>{
     const c=r.c;
     const coCell = '<div class="co"><span class="item"><img class="px" src="data:image/png;base64,'+ITEMS[c.n]+'" alt=""></span><div><b>'+c.n+'</b><small><span class="dk">'+c.s+'</span><span class="mt">'+(r.a?'$'+r.sym:'Open')+'</span></small></div></div>';
-    if(!r.a) return '<tr class="unl"><td>'+coCell+'</td><td class="hm"><span class="open">Open</span><span class="ca">e.g. $'+c.tk+'</span></td><td>—</td><td>—</td><td class="hm">—</td><td class="hm">—</td><td class="hm"><span class="pill u">Unlisted</span></td><td><button class="act list" type="button" data-list="'+c.n+'">List it</button></td></tr>';
-    return '<tr><td>'+coCell+'</td><td class="hm">'+(r.img?'<img class="cpfp" src="'+r.img+'" alt="" onerror="this.remove()">':'')+'<span class="tk">$'+r.sym+'</span><a class="ca" href="https://solscan.io/token/'+r.a+'" target="_blank" rel="noopener">'+short(r.a)+'</a></td><td>'+fmtUsd(r.mc)+'</td><td class="'+cls(r.ch)+'">'+fmtPct(r.ch)+'</td><td class="hm">'+fmtUsd(r.v)+'</td><td class="hm">'+etDate(r.since)+'</td><td class="hm"><span class="pill l">Listed</span></td><td><a class="act" href="https://pump.fun/coin/'+r.a+'" target="_blank" rel="noopener">Trade</a></td></tr>';
+    if(!r.a) return '<tr class="unl"><td>'+coCell+'</td><td class="hm"><span class="open">Open</span><span class="ca">e.g. $'+c.tk+'</span></td><td>—</td><td>—</td><td class="hm">—</td><td class="hm">—</td><td class="hm"><span class="pill u">Open</span></td><td><button class="act list" type="button" data-list="'+c.n+'">Launch it</button></td></tr>';
+    const mcCell = r.mc!=null ? fmtUsd(r.mc) : '<span class="flat">indexing</span>';
+    return '<tr><td>'+coCell+'</td><td class="hm">'+(r.img?'<img class="cpfp" src="'+r.img+'" alt="" onerror="this.remove()">':'')+'<span class="tk">$'+r.sym+'</span><a class="ca" href="https://solscan.io/token/'+r.a+'" target="_blank" rel="noopener">'+short(r.a)+'</a></td><td>'+mcCell+'</td><td class="'+cls(r.ch)+'">'+fmtPct(r.ch)+'</td><td class="hm">'+fmtUsd(r.v)+'</td><td class="hm">'+etDate(r.since)+'</td><td class="hm"><span class="pill l">Listed</span></td><td><a class="act" href="https://pump.fun/coin/'+r.a+'" target="_blank" rel="noopener">Trade</a></td></tr>';
   }).join("") || '<tr><td colspan="8" style="text-align:center;color:var(--dim);padding:40px">Nothing here yet.</td></tr>';
 
   const items = rows.map(r=> r.a
     ? '<span><img class="ti px" src="data:image/png;base64,'+ITEMS[r.c.n]+'" alt=""><b>'+r.c.n.toUpperCase()+'</b>'+fmtUsd(r.mc)+' <span class="'+cls(r.ch)+'">'+(r.ch==null?"":(r.ch>=0?"▲ ":"▼ ")+fmtPct(r.ch))+'</span></span>'
-    : '<span class="un"><img class="ti px" src="data:image/png;base64,'+ITEMS[r.c.n]+'" alt=""><b>'+r.c.n.toUpperCase()+'</b>UNLISTED</span>').join("");
+    : '<span class="un"><img class="ti px" src="data:image/png;base64,'+ITEMS[r.c.n]+'" alt=""><b>'+r.c.n.toUpperCase()+'</b>OPEN</span>').join("");
   $("tape").innerHTML = items+items;
 }
 
@@ -526,14 +528,139 @@ let dlgCo=null;
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-list]"); if(!b) return;
   dlgCo = CO.find(c=>c.n===b.dataset.list);
-  $("dlgT").textContent="List "+dlgCo.n; $("dlgName").textContent=dlgCo.n; $("dlgTk").textContent=dlgCo.tk; $("dlgMsg").textContent="";
-  $("listdlg").hidden=false; $("dlgCopy").focus();
+  openLaunch(dlgCo);
 });
 function closeDlg(){ $("listdlg").hidden=true; }
 $("dlgX").addEventListener("click",closeDlg);
 $("listdlg").addEventListener("click",e=>{ if(e.target.id==="listdlg") closeDlg(); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDlg(); });
-$("dlgCopy").addEventListener("click",()=>copy(dlgCo.n, $("dlgMsg"), "Copied “"+dlgCo.n+"”"));
+/* ---------- wallet + launch ---------- */
+const W = window.solanaWeb3;
+const MEMO_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
+const CB_ID = "ComputeBudget111111111111111111111111111111";
+let wallet=null, pk=null, imgData="", busy=false;
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+function provider(){ return (window.phantom&&window.phantom.solana) || window.solflare || window.backpack || window.solana || null; }
+function setWalletUi(){
+  const b=$("walletBtn");
+  if(pk){ b.textContent=short(pk.toBase58()); b.classList.add("on"); b.title="Connected. Click to disconnect"; }
+  else { b.textContent="Connect wallet"; b.classList.remove("on"); b.title=""; }
+  if(!busy) $("launchBtn").textContent = pk ? "Launch "+(dlgCo?dlgCo.n:"")+" on pump.fun" : "Connect wallet to launch";
+}
+function msg(html, err){ const m=$("dlgMsg"); m.innerHTML=html; m.classList.toggle("err", !!err); }
+async function connect(){
+  const p=provider();
+  if(!p){
+    if(isMobile){ location.href="https://phantom.app/ul/browse/"+encodeURIComponent(location.href)+"?ref="+encodeURIComponent(location.origin); return false; }
+    msg('No Solana wallet found in this browser. Install <a href="https://phantom.app" target="_blank" rel="noopener">Phantom</a> or Solflare, then reload.', true); return false;
+  }
+  try{ const r=await p.connect(); wallet=p; pk=(r&&r.publicKey)||p.publicKey; setWalletUi(); return true; }
+  catch(e){ msg("Wallet connection was cancelled.", true); return false; }
+}
+$("walletBtn").addEventListener("click", async ()=>{
+  if(pk){ try{ await wallet.disconnect(); }catch(_){} wallet=null; pk=null; setWalletUi(); return; }
+  await connect();
+});
+setTimeout(()=>{ try{ const p=provider(); if(p && p.connect){ p.connect({onlyIfTrusted:true}).then(r=>{ wallet=p; pk=(r&&r.publicKey)||p.publicKey; setWalletUi(); }).catch(()=>{}); } }catch(_){} }, 400);
+
+function step(i, state){ const lis=[...$("prog").children]; $("prog").hidden=false;
+  lis.forEach((li,k)=>{ li.className = k<i ? "ok" : k===i ? (state||"on") : ""; }); }
+
+function itemImage(c){
+  const cv=document.createElement("canvas"); cv.width=cv.height=512; const g=cv.getContext("2d");
+  const gr=g.createLinearGradient(0,0,0,512); gr.addColorStop(0,"#6a23bf"); gr.addColorStop(.62,"#f72e94"); gr.addColorStop(.62,"#2a0f4f"); gr.addColorStop(1,"#130923");
+  g.fillStyle=gr; g.fillRect(0,0,512,512);
+  g.fillStyle="#fd8843"; g.beginPath(); g.arc(256,318,150,Math.PI,0); g.fill();
+  const im=new Image(); im.src="data:image/png;base64,"+ITEMS[c.n];
+  return new Promise(res=>{ im.onload=()=>{ g.imageSmoothingEnabled=false; g.drawImage(im,64,52,384,384); res(cv.toDataURL("image/png")); }; im.onerror=()=>res(cv.toDataURL("image/png")); });
+}
+async function openLaunch(c){
+  busy=false; msg(""); $("prog").hidden=true; [...$("prog").children].forEach(li=>li.className="");
+  $("dlgT").textContent="Launch "+c.n;
+  $("fName").value=c.n; $("fTk").value=c.tk; $("fBuy").value="0"; $("fX").value=""; $("dlgFile").value="";
+  imgData = await itemImage(c); $("dlgImg").src=imgData;
+  $("launchBtn").disabled=false; setWalletUi();
+  $("listdlg").hidden=false; $("fTk").focus();
+}
+$("dlgFile").addEventListener("change", e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  if(f.size>4e6){ msg("That image is over 4 MB. Pick a smaller one.", true); return; }
+  const r=new FileReader(); r.onload=()=>{ imgData=r.result; $("dlgImg").src=imgData; msg(""); }; r.readAsDataURL(f);
+});
+async function post(url, body){
+  const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  let j={}; try{ j=await r.json(); }catch(_){}
+  if(!r.ok) throw new Error(j.error ? j.error+(j.logs?" · "+j.logs.join(" "):"") : "HTTP "+r.status);
+  return j;
+}
+const b64ToBytes = b=>Uint8Array.from(atob(b),ch=>ch.charCodeAt(0));
+const bytesToB64 = u=>{ let s=""; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); };
+
+// Adds the BAWSAQ registry record (0 SOL transfer + memo) to PumpPortal's create transaction.
+function withRegistry(vt, company, mint){
+  if(vt.message.addressTableLookups && vt.message.addressTableLookups.length) throw new Error("Unexpected lookup tables in the launch transaction.");
+  const tm = W.TransactionMessage.decompile(vt.message);
+  for(const ix of tm.instructions){
+    if(ix.programId.toBase58()===CB_ID && ix.data.length>=5 && ix.data[0]===2){
+      const dv=new DataView(ix.data.buffer, ix.data.byteOffset, ix.data.length);
+      dv.setUint32(1, Math.min(1400000, dv.getUint32(1,true)+40000), true);
+    }
+  }
+  tm.instructions.push(W.SystemProgram.transfer({ fromPubkey: pk, toPubkey: new W.PublicKey(CFG.REGISTRY), lamports: 0 }));
+  tm.instructions.push(new W.TransactionInstruction({ programId: new W.PublicKey(MEMO_ID),
+    keys: [{ pubkey: pk, isSigner: true, isWritable: false }],
+    data: new TextEncoder().encode("BAWSAQ|"+company+"|"+mint) }));
+  return new W.VersionedTransaction(tm.compileToV0Message());
+}
+
+$("launchBtn").addEventListener("click", async ()=>{
+  if(busy) return;
+  if(!pk){ await connect(); return; }
+  if(!W){ msg("The Solana library didn't load. Reload the page and try again.", true); return; }
+  if(!CFG.REGISTRY){ msg("Registry address missing from config.js.", true); return; }
+  const c=dlgCo; const sym=$("fTk").value.trim().toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,10);
+  const buy=Math.max(0,Math.min(10,parseFloat($("fBuy").value)||0));
+  const xl=$("fX").value.trim();
+  if(!sym){ msg("Add a ticker (letters and numbers, up to 10).", true); return; }
+  if(xl && !/^https:\/\/(x|twitter)\.com\//.test(xl)){ msg("X link should start with https://x.com/", true); return; }
+  busy=true; $("launchBtn").disabled=true; $("launchBtn").textContent="Launching…"; msg("");
+  let k=0;
+  try{
+    step(k=0);
+    const now = await getBoard(true);
+    const taken = (now.listings||[]).find(l=>l.company===c.n);
+    if(taken) throw new Error(c.n+" was just launched by "+short(taken.creator||taken.mint)+". Only the first launch owns it.");
+    step(k=1);
+    const meta = await post("/api/ipfs",{ name:c.n, symbol:sym, image:imgData, website:location.origin, twitter:xl||undefined,
+      description: c.n+" on BAWSAQ, GTA VI's stock market. Launched through "+location.host+"; the first BAWSAQ launch of "+c.n+" owns the listing." });
+    step(k=2);
+    const mintKp = W.Keypair.generate(); const mint=mintKp.publicKey.toBase58();
+    const built = await post("/api/create",{ publicKey:pk.toBase58(), mint, name:c.n, symbol:sym, uri:meta.metadataUri, amount:buy });
+    const tx = withRegistry(W.VersionedTransaction.deserialize(b64ToBytes(built.tx)), c.n, mint);
+    tx.sign([mintKp]);
+    step(k=3);
+    const signed = await wallet.signTransaction(tx);
+    step(k=4);
+    const sent = await post("/api/send",{ tx: bytesToB64(signed.serialize()) });
+    const sig = sent.signature;
+    let st="pending";
+    for(let i=0;i<40 && !/confirmed|finalized|failed/.test(st);i++){
+      await new Promise(r=>setTimeout(r,1500));
+      try{ st=(await (await fetch("/api/send?sig="+encodeURIComponent(sig))).json()).status; }catch(_){}
+    }
+    if(st==="failed") throw new Error("The transaction failed on-chain: "+sig);
+    step(k=6);
+    msg('Launched. <a href="https://pump.fun/coin/'+mint+'" target="_blank" rel="noopener">Open $'+sym+' on pump.fun</a> · <a href="https://solscan.io/tx/'+sig+'" target="_blank" rel="noopener">transaction</a>'+(st==="pending"?" (still confirming)":"")+'. '+c.n+' is yours on the board.');
+    $("launchBtn").textContent="Launched";
+    setTimeout(()=>refresh(true), 4000); setTimeout(()=>refresh(true), 20000);
+  }catch(e){
+    step(k,"bad");
+    const t=String(e&&e.message||e);
+    msg(/reject|cancel|denied|declined/i.test(t) ? "You cancelled in your wallet. Nothing was sent." : t, true);
+    busy=false; $("launchBtn").disabled=false; setWalletUi();
+  }
+});
+
 
 function copy(txt, msgEl, okMsg){
   const done=()=>{ if(msgEl) msgEl.textContent=okMsg; };
@@ -632,7 +759,8 @@ function boot(){
 if(src.complete && src.naturalWidth) boot(); else src.onload=boot;
 
 /* data */
-state.rows = fromSnap(); state.at = SNAP.t; render();
-refresh(); setInterval(refresh, 60000);
+render();
+refresh(); setInterval(()=>refresh(false), 30000);
+const REG = CFG.REGISTRY || ""; $("regLink").textContent = REG; $("regLink").href = "https://solscan.io/account/"+REG;
 })();
 </script>
